@@ -1,0 +1,30 @@
+name: Auto Sync Upstream
+
+on:
+  schedule:
+    # 每天北京时间凌晨 4 点自动检查一次更新 (UTC时间 20:00)
+    - cron: '0 20 * * *'
+  workflow_dispatch: # 允许你手动点击测试
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          # 需要使用 PAT 才能触发后续的 deploy action，如果没有配，默认也可以合并，但可能不触发 deploy
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync upstream changes
+        id: sync
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
+        with:
+          upstream_sync_repo: wangwangit/SubsTracker # 原作者的仓库
+          upstream_sync_branch: master               # 原作者的分支
+          target_sync_branch: master                 # 你自己的分支
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }} # 自动调用内置 Token
+          
+      - name: Check sync result
+        if: steps.sync.outputs.has_new_commits == 'true'
+        run: echo "同步成功！发现新更新，将自动触发部署工作流。"
